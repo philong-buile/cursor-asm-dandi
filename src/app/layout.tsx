@@ -15,10 +15,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isInDashboard = pathname?.startsWith('/dashboards');
   const [showSidebar, setShowSidebar] = useState(true);
+  
+  // List of paths where we don't want to show the sidebar
+  const noSidebarPaths = ['/login', '/register', '/404'];
+  const shouldShowSidebar = !noSidebarPaths.includes(pathname || '');
 
-  if (!isInDashboard) {
+  if (!shouldShowSidebar) {
     return (
       <html lang="en">
         <body className={inter.className}>
@@ -32,38 +35,36 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {showSidebar && isInDashboard && <Sidebar />}
-        <div className={showSidebar && isInDashboard ? "pl-64" : ""}>
-          {isInDashboard && (
-            <button
-              onClick={() => setShowSidebar(!showSidebar)}
-              className="fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors"
-              title={showSidebar ? "Hide Sidebar" : "Show Sidebar"}
+        {showSidebar && <Sidebar />}
+        <div className={showSidebar ? "pl-64" : ""}>
+          <button
+            onClick={() => setShowSidebar(!showSidebar)}
+            className="fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-md hover:bg-gray-50 transition-colors"
+            title={showSidebar ? "Hide Sidebar" : "Show Sidebar"}
+          >
+            <svg
+              className="w-6 h-6 text-gray-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
             >
-              <svg
-                className="w-6 h-6 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                {showSidebar ? (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
-                  />
-                ) : (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 5l7 7-7 7M5 5l7 7-7 7"
-                  />
-                )}
-              </svg>
-            </button>
-          )}
+              {showSidebar ? (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
+                />
+              ) : (
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 5l7 7-7 7M5 5l7 7-7 7"
+                />
+              )}
+            </svg>
+          </button>
           {children}
         </div>
         <Toaster />
