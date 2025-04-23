@@ -11,10 +11,11 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    const id = params.id;
     const { error } = await supabase
       .from('api_keys')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) throw error;
 
@@ -33,8 +34,8 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const body = await request.json();
-    const { name } = body;
+    const id = params.id;
+    const { name } = await request.json();
 
     if (!name) {
       return NextResponse.json(
@@ -46,7 +47,7 @@ export async function PUT(
     const { data, error } = await supabase
       .from('api_keys')
       .update({ name })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
