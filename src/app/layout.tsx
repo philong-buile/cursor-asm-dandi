@@ -18,7 +18,7 @@ export default function RootLayout({
   const [showSidebar, setShowSidebar] = useState(true);
   
   // List of paths where we don't want to show the sidebar
-  const noSidebarPaths = ['/login', '/register', '/404'];
+  const noSidebarPaths = ['/', '/login', '/register', '/404'];
   const shouldShowSidebar = !noSidebarPaths.includes(pathname || '');
 
   if (!shouldShowSidebar) {
