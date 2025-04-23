@@ -11,10 +11,12 @@ interface ApiKey {
   created_at: string;
   last_used?: string;
   usage: number;
+  monthlyLimit?: number | null;
 }
 
 export default function Dashboard() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [newKeyName, setNewKeyName] = useState('');
   const [monthlyLimit, setMonthlyLimit] = useState('1000');
   const [isLimitEnabled, setIsLimitEnabled] = useState(false);
@@ -22,6 +24,8 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingKey, setEditingKey] = useState<ApiKey | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     fetchApiKeys();
@@ -44,35 +48,46 @@ export default function Dashboard() {
   };
 
   const handleCreateKey = async () => {
-    if (!newKeyName) return;
+    if (!newKeyName.trim()) return;
     
     setIsCreating(true);
     try {
-      const response = await fetch('/api/keys', {
-        method: 'POST',
+      const isEditMode = isEditing && editingKey;
+      const url = isEditMode ? `/api/keys/${editingKey.id}` : '/api/keys';
+      const method = isEditMode ? 'PUT' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          name: newKeyName,
-          monthlyLimit: isLimitEnabled ? parseInt(monthlyLimit) : null 
+        body: JSON.stringify({
+          name: newKeyName.trim(),
+          monthlyLimit: isLimitEnabled ? parseInt(monthlyLimit) : null
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create API key');
+        throw new Error(isEditMode ? 'Failed to update API key' : 'Failed to create API key');
       }
 
-      const newKey = await response.json();
-      setApiKeys([...apiKeys, newKey]);
-      setNewKeyName('');
-      setMonthlyLimit('1000');
-      setIsLimitEnabled(false);
-      setIsModalOpen(false);
-      toast.success('API key created successfully');
+      const responseData = await response.json();
+      
+      if (isEditMode) {
+        setApiKeys(prevKeys => prevKeys.map(key => 
+          key.id === editingKey.id ? responseData : key
+        ));
+        toast.success('API key updated successfully');
+      } else {
+        setApiKeys(prevKeys => [...prevKeys, responseData]);
+        toast.success('API key created successfully');
+      }
+
+      resetForm();
     } catch (error) {
-      toast.error('Failed to create API key');
-      console.error('Error creating API key:', error);
+      const errorMessage = isEditing ? 'Failed to update API key' : 'Failed to create API key';
+      toast.error(errorMessage);
+      console.error('Error:', error);
     } finally {
       setIsCreating(false);
     }
@@ -92,9 +107,21 @@ export default function Dashboard() {
       }
 
       setApiKeys(apiKeys.filter(key => key.id !== id));
-      toast.success('API key deleted successfully');
+      toast.success('API key deleted successfully', {
+        position: 'top-center',
+        style: {
+          background: '#ef4444',
+          color: '#ffffff',
+        },
+      });
     } catch (error) {
-      toast.error('Failed to delete API key');
+      toast.error('Failed to delete API key', {
+        position: 'top-center',
+        style: {
+          background: '#ef4444',
+          color: '#ffffff',
+        },
+      });
       console.error('Error deleting API key:', error);
     } finally {
       setIsDeleting(null);
@@ -103,7 +130,43 @@ export default function Dashboard() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('API key copied to clipboard');
+    toast.success('API key copied to clipboard', {
+      position: 'top-center',
+      style: {
+        background: '#22c55e',
+        color: '#ffffff',
+      },
+    });
+  };
+
+  const toggleKeyVisibility = (keyId: string) => {
+    setVisibleKeys(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(keyId)) {
+        newSet.delete(keyId);
+      } else {
+        newSet.add(keyId);
+      }
+      return newSet;
+    });
+  };
+
+  const openEditModal = (key: ApiKey) => {
+    setEditingKey(key);
+    setNewKeyName(key.name);
+    setMonthlyLimit(key.monthlyLimit?.toString() || '1000');
+    setIsLimitEnabled(!!key.monthlyLimit);
+    setIsEditing(true);
+    setIsModalOpen(true);
+  };
+
+  const resetForm = () => {
+    setNewKeyName('');
+    setMonthlyLimit('1000');
+    setIsLimitEnabled(false);
+    setIsModalOpen(false);
+    setIsEditing(false);
+    setEditingKey(null);
   };
 
   const CreateKeyModal = () => {
@@ -111,22 +174,19 @@ export default function Dashboard() {
 
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
-        {/* Semi-transparent overlay */}
         <div 
           className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-          onClick={() => {
-            setIsModalOpen(false);
-            setNewKeyName('');
-            setMonthlyLimit('1000');
-            setIsLimitEnabled(false);
-          }}
+          onClick={resetForm}
         />
         
-        {/* Modal content */}
         <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 shadow-xl">
           <div className="p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Create a new API key</h2>
-            <p className="text-base text-gray-600 mb-8">Enter a name and limit for the new API key.</p>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {isEditing ? `Edit API key "${editingKey?.name}"` : 'Create a new API key'}
+            </h2>
+            <p className="text-base text-gray-600 mb-8">
+              {isEditing ? 'Update the name and limit for this API key.' : 'Enter a name and limit for the new API key.'}
+            </p>
             
             <div className="space-y-6">
               <div>
@@ -170,12 +230,7 @@ export default function Dashboard() {
 
               <div className="flex justify-end space-x-3 pt-4">
                 <button
-                  onClick={() => {
-                    setIsModalOpen(false);
-                    setNewKeyName('');
-                    setMonthlyLimit('1000');
-                    setIsLimitEnabled(false);
-                  }}
+                  onClick={resetForm}
                   className="px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors"
                 >
                   Cancel
@@ -185,7 +240,7 @@ export default function Dashboard() {
                   disabled={isCreating || !newKeyName.trim()}
                   className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {isCreating ? 'Creating...' : 'Create'}
+                  {isCreating ? 'Saving...' : isEditing ? 'Save Changes' : 'Create'}
                 </button>
               </div>
             </div>
@@ -263,30 +318,72 @@ export default function Dashboard() {
                     <td className="py-4 text-sm font-medium text-gray-900">{apiKey.name}</td>
                     <td className="py-4 text-sm font-medium text-gray-900">{apiKey.usage || 0}</td>
                     <td className="py-4 font-mono text-sm font-medium text-gray-900">
-                      {apiKey.key.substring(0, 8)}************************
+                      {visibleKeys.has(apiKey.id) ? (
+                        apiKey.key
+                      ) : (
+                        `${apiKey.key.substring(0, 8)}************************`
+                      )}
                     </td>
                     <td className="py-4">
                       <div className="flex space-x-3">
                         <button 
-                          onClick={() => copyToClipboard(apiKey.key)} 
-                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => toggleKeyVisibility(apiKey.id)} 
+                          className={`p-1.5 hover:bg-gray-100 rounded transition-colors ${visibleKeys.has(apiKey.id) ? 'bg-gray-100' : ''}`}
+                          title={visibleKeys.has(apiKey.id) ? "Hide API key" : "Show API key"}
                         >
-                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          <svg 
+                            className="w-5 h-5 text-gray-600" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            {visibleKeys.has(apiKey.id) ? (
+                              <path 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round" 
+                                strokeWidth={2} 
+                                d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                              />
+                            ) : (
+                              <>
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth={2} 
+                                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" 
+                                />
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth={2} 
+                                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" 
+                                />
+                              </>
+                            )}
                           </svg>
                         </button>
                         <button 
                           onClick={() => copyToClipboard(apiKey.key)} 
                           className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                          title="Copy API key"
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
                           </svg>
                         </button>
                         <button 
+                          onClick={() => openEditModal(apiKey)}
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                          title="Edit API key"
+                        >
+                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button 
                           onClick={() => handleDeleteKey(apiKey.id)} 
                           className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                          title="Delete API key"
                         >
                           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
