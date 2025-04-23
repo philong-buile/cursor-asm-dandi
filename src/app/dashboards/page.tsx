@@ -16,9 +16,12 @@ interface ApiKey {
 export default function Dashboard() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newKeyName, setNewKeyName] = useState('');
+  const [monthlyLimit, setMonthlyLimit] = useState('1000');
+  const [isLimitEnabled, setIsLimitEnabled] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchApiKeys();
@@ -50,7 +53,10 @@ export default function Dashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name: newKeyName }),
+        body: JSON.stringify({ 
+          name: newKeyName,
+          monthlyLimit: isLimitEnabled ? parseInt(monthlyLimit) : null 
+        }),
       });
 
       if (!response.ok) {
@@ -60,6 +66,9 @@ export default function Dashboard() {
       const newKey = await response.json();
       setApiKeys([...apiKeys, newKey]);
       setNewKeyName('');
+      setMonthlyLimit('1000');
+      setIsLimitEnabled(false);
+      setIsModalOpen(false);
       toast.success('API key created successfully');
     } catch (error) {
       toast.error('Failed to create API key');
@@ -95,6 +104,95 @@ export default function Dashboard() {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
     toast.success('API key copied to clipboard');
+  };
+
+  const CreateKeyModal = () => {
+    if (!isModalOpen) return null;
+
+    return (
+      <div className="fixed inset-0 flex items-center justify-center z-50">
+        {/* Semi-transparent overlay */}
+        <div 
+          className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+          onClick={() => {
+            setIsModalOpen(false);
+            setNewKeyName('');
+            setMonthlyLimit('1000');
+            setIsLimitEnabled(false);
+          }}
+        />
+        
+        {/* Modal content */}
+        <div className="relative bg-white rounded-2xl w-full max-w-md mx-4 shadow-xl">
+          <div className="p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Create a new API key</h2>
+            <p className="text-base text-gray-600 mb-8">Enter a name and limit for the new API key.</p>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">
+                  Key Name
+                </label>
+                <p className="text-sm text-gray-500 mb-2">A unique name to identify this key</p>
+                <input
+                  type="text"
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="Key Name"
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="inline-flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={isLimitEnabled}
+                    onChange={(e) => setIsLimitEnabled(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="ml-2 text-sm font-medium text-gray-900">Limit monthly usage*</span>
+                </label>
+                {isLimitEnabled && (
+                  <input
+                    type="number"
+                    value={monthlyLimit}
+                    onChange={(e) => setMonthlyLimit(e.target.value)}
+                    className="mt-2 w-full px-4 py-2.5 border border-gray-200 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                  />
+                )}
+              </div>
+
+              <p className="text-sm text-gray-500">
+                *If the combined usage of all your keys exceeds your plan's limit, all requests will be rejected.
+              </p>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setNewKeyName('');
+                    setMonthlyLimit('1000');
+                    setIsLimitEnabled(false);
+                  }}
+                  className="px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg border border-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCreateKey}
+                  disabled={isCreating || !newKeyName.trim()}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isCreating ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -143,8 +241,7 @@ export default function Dashboard() {
                 </p>
               </div>
               <button
-                onClick={handleCreateKey}
-                disabled={isCreating}
+                onClick={() => setIsModalOpen(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
               >
                 + New Key
@@ -204,6 +301,7 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+      <CreateKeyModal />
     </div>
   );
 } 
