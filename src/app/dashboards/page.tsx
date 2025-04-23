@@ -10,6 +10,7 @@ interface ApiKey {
   key: string;
   created_at: string;
   last_used?: string;
+  usage: number;
 }
 
 export default function Dashboard() {
@@ -99,95 +100,108 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">API Key Management</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Create and manage your API keys for accessing our services
-            </p>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center space-x-2">
+            <h1 className="text-xl font-semibold text-gray-900">Pages / Overview</h1>
           </div>
-          <Link
-            href="/"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            ← Back to Home
-          </Link>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <span className="inline-flex h-2.5 w-2.5 rounded-full bg-green-500"></span>
+              <span className="text-sm font-medium text-gray-700">Operational</span>
+            </div>
+          </div>
         </div>
 
-        <div className="bg-white shadow rounded-lg mb-8">
-          <div className="px-4 py-5 sm:p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Create New API Key</h2>
-            <div className="flex gap-4">
-              <input
-                type="text"
-                value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="Enter a name for your API key"
-                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-md border border-gray-300 shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
+        {/* Current Plan Card */}
+        <div className="mb-8 rounded-xl bg-gradient-to-r from-purple-600 via-purple-400 to-pink-300 p-6 text-white">
+          <div className="flex justify-between items-center">
+            <div>
+              <div className="text-sm font-semibold tracking-wide mb-2">CURRENT PLAN</div>
+              <h2 className="text-3xl font-bold mb-4">Researcher</h2>
+              <div className="flex items-center space-x-3">
+                <span className="text-sm font-medium">API Limit</span>
+                <div className="w-64 h-2 bg-white/30 rounded-full">
+                  <div className="w-1/4 h-full bg-white rounded-full"></div>
+                </div>
+                <span className="text-sm font-medium">24/1,000 Requests</span>
+              </div>
+            </div>
+            <button className="px-4 py-2 bg-white/20 rounded-lg text-sm font-medium hover:bg-white/30">
+              Manage Plan
+            </button>
+          </div>
+        </div>
+
+        {/* API Keys Section */}
+        <div className="bg-white rounded-xl shadow-sm border">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">API Keys</h2>
+                <p className="text-sm font-medium text-gray-600 mt-1">
+                  The key is used to authenticate your requests to the Research API. To learn more, see the documentation page.
+                </p>
+              </div>
               <button
                 onClick={handleCreateKey}
-                disabled={isCreating || !newKeyName}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isCreating}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
               >
-                {isCreating ? 'Creating...' : 'Create Key'}
+                + New Key
               </button>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-            <h2 className="text-lg font-medium text-gray-900">Your API Keys</h2>
+            <table className="w-full mt-6">
+              <thead>
+                <tr className="text-left">
+                  <th className="pb-4 text-sm font-semibold text-gray-600">NAME</th>
+                  <th className="pb-4 text-sm font-semibold text-gray-600">USAGE</th>
+                  <th className="pb-4 text-sm font-semibold text-gray-600">KEY</th>
+                  <th className="pb-4 text-sm font-semibold text-gray-600">OPTIONS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {apiKeys.map((apiKey) => (
+                  <tr key={apiKey.id}>
+                    <td className="py-4 text-sm font-medium text-gray-900">{apiKey.name}</td>
+                    <td className="py-4 text-sm font-medium text-gray-900">{apiKey.usage || 0}</td>
+                    <td className="py-4 font-mono text-sm font-medium text-gray-900">
+                      {apiKey.key.substring(0, 8)}************************
+                    </td>
+                    <td className="py-4">
+                      <div className="flex space-x-3">
+                        <button 
+                          onClick={() => copyToClipboard(apiKey.key)} 
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => copyToClipboard(apiKey.key)} 
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteKey(apiKey.id)} 
+                          className="p-1.5 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          
-          {isLoading ? (
-            <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            </div>
-          ) : apiKeys.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              No API keys created yet. Create your first API key to get started.
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {apiKeys.map((apiKey) => (
-                <li key={apiKey.id} className="px-4 py-5 sm:px-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">{apiKey.name}</h3>
-                      <div className="mt-1 text-sm text-gray-500">
-                        <p>Created: {new Date(apiKey.created_at).toLocaleDateString()}</p>
-                        {apiKey.last_used && (
-                          <p>Last used: {new Date(apiKey.last_used).toLocaleDateString()}</p>
-                        )}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleDeleteKey(apiKey.id)}
-                      disabled={isDeleting === apiKey.id}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50"
-                    >
-                      {isDeleting === apiKey.id ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
-                  <div className="mt-4">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-50 rounded-md p-2">
-                        <code className="text-sm font-mono text-gray-900">{apiKey.key}</code>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(apiKey.key)}
-                        className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      >
-                        Copy
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
       </div>
     </div>
