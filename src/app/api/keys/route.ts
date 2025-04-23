@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     }
 
     // Generate a random API key
-    const key = `sk_${Math.random().toString(36).substring(2)}_${Date.now()}`;
+    const key = `dandi_${Math.random().toString(36).substring(2)}_${Date.now()}`;
 
     const { data, error } = await supabase
       .from('api_keys')
