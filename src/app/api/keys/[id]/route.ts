@@ -26,4 +26,38 @@ export async function DELETE(
       { status: 500 }
     );
   }
+}
+
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const body = await request.json();
+    const { name } = body;
+
+    if (!name) {
+      return NextResponse.json(
+        { error: 'Name is required' },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('api_keys')
+      .update({ name })
+      .eq('id', params.id)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error('Error updating API key:', error);
+    return NextResponse.json(
+      { error: 'Failed to update API key' },
+      { status: 500 }
+    );
+  }
 } 
