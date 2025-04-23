@@ -107,9 +107,21 @@ export default function Dashboard() {
       }
 
       setApiKeys(apiKeys.filter(key => key.id !== id));
-      toast.success('API key deleted successfully');
+      toast.success('API key deleted successfully', {
+        position: 'top-center',
+        style: {
+          background: '#ef4444',
+          color: '#ffffff',
+        },
+      });
     } catch (error) {
-      toast.error('Failed to delete API key');
+      toast.error('Failed to delete API key', {
+        position: 'top-center',
+        style: {
+          background: '#ef4444',
+          color: '#ffffff',
+        },
+      });
       console.error('Error deleting API key:', error);
     } finally {
       setIsDeleting(null);
@@ -118,7 +130,13 @@ export default function Dashboard() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('API key copied to clipboard');
+    toast.success('API key copied to clipboard', {
+      position: 'top-center',
+      style: {
+        background: '#22c55e',
+        color: '#ffffff',
+      },
+    });
   };
 
   const toggleKeyVisibility = (keyId: string) => {
