@@ -1,13 +1,28 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
 
   const isActive = (path: string) => {
     return pathname === path;
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Error signing out:', error.message);
+      } else {
+        router.push('/');
+      }
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
   };
 
   return (
@@ -112,6 +127,15 @@ export default function Sidebar() {
           <div className="flex-1">
             <p className="text-sm font-medium text-gray-900">Bui Le Phi Long</p>
           </div>
+          <button
+            onClick={handleSignOut}
+            className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            title="Sign Out"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
         </div>
       </div>
     </div>
