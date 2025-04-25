@@ -4,6 +4,12 @@ import type { NextRequest } from 'next/server';
 
 export async function middleware(req: NextRequest) {
   console.log('Middleware running for path:', req.nextUrl.pathname);
+  
+  // Skip middleware for auth callback route and Google Sign-In
+  if (req.nextUrl.pathname === '/auth/callback' || req.nextUrl.pathname.includes('google')) {
+    return NextResponse.next();
+  }
+
   const res = NextResponse.next();
   
   try {
@@ -14,7 +20,7 @@ export async function middleware(req: NextRequest) {
     let session = null;
     let attempts = 0;
     const maxAttempts = 3;
-    const delay = 1000; // 1 second delay
+    const delay = 200; // 1 second delay
 
     while (attempts < maxAttempts) {
       const { data, error } = await supabase.auth.getSession();
@@ -44,19 +50,17 @@ export async function middleware(req: NextRequest) {
     // If we have a session and user is on home page, redirect to dashboard
     if (session && req.nextUrl.pathname === '/') {
       console.log('Session found, redirecting to dashboard');
-      const redirectUrl = new URL('/dashboards', req.url);
-      return NextResponse.redirect(redirectUrl);
+      return NextResponse.redirect(new URL('/dashboards', req.url));
     }
 
     // For all other cases, just continue with the request
     return res;
   } catch (error) {
     console.error('Middleware error:', error);
-    // On error, just continue with the request
     return res;
   }
 }
 
 export const config = {
-  matcher: ['/', '/dashboards/:path*'],
+  matcher: ['/', '/dashboards/:path*', '/auth/callback'],
 }; 
